@@ -90,3 +90,27 @@ th { font-size: 13px; color: #666; }
 .stat strong { font-size: 22px; }
 .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 8px 0 16px; }
 .filters input { padding: 8px 10px; font-size: 16px; border-radius: 8px; border: 1px solid #c8ccd0; }
+
+*, *::before, *::after { box-sizing: border-box; }
+.form-grid input, .form-grid select, .form-grid button,
+.item-row input, .item-row select,
+.card input, .card button {
+  width: 100%;
+  min-width: 0;
+}
+.btn.small { padding: 4px 10px; font-size: 14px; }
+.actions { display: flex; gap: 6px; white-space: nowrap; }
+
+@media (max-width: 600px) {
+  .page { margin: 12px auto; padding: 0 10px; }
+  .panel { padding: 12px; }
+  .card { margin: 16px auto; width: calc(100% - 24px); }
+  .topbar { padding: 10px 12px; gap: 8px 12px; }
+  .topbar nav { order: 3; flex-basis: 100%; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; }
+  .item-row { grid-template-columns: 1fr 1fr; }
+  .item-row select { grid-column: 1 / -1; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stat strong { font-size: 18px; }
+  th, td { padding: 8px 6px; font-size: 14px; }
+  h2 { font-size: 20px; }
+}

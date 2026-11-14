@@ -2,8 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { brl, num } from '../lib/format'
 
-type StockRow = { material_id: string; name: string; unit: 'kg' | 'un'; balance: number }
+type Mat = { id: string; name: string; unit: 'kg' | 'un'; default_buy_price: number | null }
+type Bal = { material_id: string; balance: number }
 
 export default function Materials() {
   const companyId = useAuth().company!.id
@@ -11,33 +13,54 @@ export default function Materials() {
   const [name, setName] = useState('')
   const [unit, setUnit] = useState<'kg' | 'un'>('kg')
   const [price, setPrice] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
 
-  const { data: rows = [], isLoading } = useQuery({
+  const { data: mats = [], isLoading } = useQuery({
     queryKey: ['materials', companyId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('v_stock_balance')
-        .select('material_id, name, unit, balance')
+        .from('materials')
+        .select('id, name, unit, default_buy_price')
+        .eq('active', true)
         .order('name')
       if (error) throw error
-      return data as StockRow[]
+      return data as Mat[]
     },
   })
 
-  const add = useMutation({
+  const { data: balances = [] } = useQuery({
+    queryKey: ['materials', 'balance', companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('v_stock_balance')
+        .select('material_id, balance')
+      if (error) throw error
+      return data as Bal[]
+    },
+  })
+
+  const balanceOf = (id: string) =>
+    Number(balances.find((b) => b.material_id === id)?.balance ?? 0)
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ['materials'] })
+
+  const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('materials').insert({
-        company_id: companyId,
-        name: name.trim(),
-        unit,
-        default_buy_price: price ? Number(price.replace(',', '.')) : null,
-      })
+      const default_buy_price = price.trim() ? num(price) : null
+      const { error } = editingId
+        ? await supabase
+            .from('materials')
+            .update({ name: name.trim(), default_buy_price })
+            .eq('id', editingId)
+        : await supabase
+            .from('materials')
+            .insert({ company_id: companyId, name: name.trim(), unit, default_buy_price })
       if (error) throw error
     },
     onSuccess: () => {
-      setName(''); setPrice(''); setMsg('')
-      qc.invalidateQueries({ queryKey: ['materials'] })
+      setName(''); setPrice(''); setUnit('kg'); setEditingId(null); setMsg('')
+      refresh()
     },
     onError: (e) => {
       const err = e as { code?: string; message?: string }
@@ -45,43 +68,90 @@ export default function Materials() {
     },
   })
 
+  const deactivate = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('materials').update({ active: false }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: refresh,
+    onError: (e) => setMsg((e as { message?: string }).message ?? 'Erro'),
+  })
+
+  function startEdit(m: Mat) {
+    setEditingId(m.id)
+    setName(m.name)
+    setUnit(m.unit)
+    setPrice(m.default_buy_price != null ? String(m.default_buy_price).replace('.', ',') : '')
+    setMsg('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function cancelEdit() {
+    setEditingId(null); setName(''); setPrice(''); setUnit('kg'); setMsg('')
+  }
+
+  function askDeactivate(m: Mat) {
+    if (balanceOf(m.id) !== 0) {
+      return setMsg(`Só dá para inativar "${m.name}" com o estoque zerado.`)
+    }
+    if (window.confirm(`Inativar "${m.name}"? O histórico de compras continua guardado.`)) {
+      setMsg('')
+      deactivate.mutate(m.id)
+    }
+  }
+
   function submit(e: FormEvent) {
     e.preventDefault()
-    add.mutate()
+    save.mutate()
   }
 
   return (
     <>
       <form className="panel" onSubmit={submit}>
-        <h2>Novo material</h2>
+        <h2>{editingId ? 'Editar material' : 'Novo material'}</h2>
         <div className="form-grid">
           <input placeholder="Nome (ex.: Ferro, Alumínio)" value={name}
             onChange={(e) => setName(e.target.value)} required />
-          <select value={unit} onChange={(e) => setUnit(e.target.value as 'kg' | 'un')}>
+          <select value={unit} disabled={!!editingId}
+            onChange={(e) => setUnit(e.target.value as 'kg' | 'un')}>
             <option value="kg">Por kg</option>
             <option value="un">Por unidade</option>
           </select>
           <input placeholder="Preço padrão de compra (opcional)" inputMode="decimal"
             value={price} onChange={(e) => setPrice(e.target.value)} />
-          <button disabled={add.isPending}>Cadastrar</button>
+          <button disabled={save.isPending}>{editingId ? 'Salvar alterações' : 'Cadastrar'}</button>
+          {editingId && (
+            <button type="button" className="btn secondary" onClick={cancelEdit}>Cancelar</button>
+          )}
         </div>
+        {editingId && <p>A unidade não pode ser alterada depois de criada.</p>}
         {msg && <p className="msg">{msg}</p>}
       </form>
 
       <div className="panel">
         <h2>Materiais e estoque</h2>
-        {isLoading ? <p>Carregando...</p> : rows.length === 0 ? (
+        {isLoading ? <p>Carregando...</p> : mats.length === 0 ? (
           <p>Nenhum material cadastrado ainda.</p>
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Material</th><th>Unidade</th><th>Estoque</th></tr></thead>
+              <thead>
+                <tr><th>Material</th><th>Estoque</th><th>Preço padrão</th><th></th></tr>
+              </thead>
               <tbody>
-                {rows.map((r) => (
-                  <tr key={r.material_id}>
-                    <td>{r.name}</td>
-                    <td>{r.unit === 'kg' ? 'kg' : 'unidade'}</td>
-                    <td>{Number(r.balance).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} {r.unit}</td>
+                {mats.map((m) => (
+                  <tr key={m.id}>
+                    <td>{m.name}</td>
+                    <td>
+                      {balanceOf(m.id).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} {m.unit}
+                    </td>
+                    <td>{m.default_buy_price != null ? `${brl(m.default_buy_price)}/${m.unit}` : '—'}</td>
+                    <td>
+                      <div className="actions">
+                        <button className="btn secondary small" onClick={() => startEdit(m)}>Editar</button>
+                        <button className="btn danger small" onClick={() => askDeactivate(m)}>Inativar</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
