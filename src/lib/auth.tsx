@@ -4,7 +4,8 @@ import {
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 
-type Company = { id: string; name: string }
+type Role = 'owner' | 'admin' | 'operator'
+type Company = { id: string; name: string; role: Role }
 
 type AuthState = {
   session: Session | null
@@ -44,12 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCompanyLoading(true)
     const { data } = await supabase
       .from('company_members')
-      .select('companies(id, name)')
+      .select('role, companies(id, name)')
       .eq('user_id', userId)
       .limit(1)
       .maybeSingle()
-    const row = data as unknown as { companies: Company } | null
-    setCompany(row?.companies ?? null)
+    const row = data as unknown as {
+      role: Role
+      companies: { id: string; name: string }
+    } | null
+    setCompany(row ? { ...row.companies, role: row.role } : null)
     setCompanyLoading(false)
   }, [userId])
 

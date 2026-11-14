@@ -16,6 +16,7 @@ type Recent = {
 export default function Home() {
   const { company } = useAuth()
   const companyId = company!.id
+  const isAdmin = company!.role !== 'operator'
 
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', companyId],
@@ -57,7 +58,9 @@ export default function Home() {
       <div className="stats">
         <div className="stat"><span>Compras no mês</span><strong>{data.monthCount}</strong></div>
         <div className="stat"><span>Total comprado no mês</span><strong>{brl(data.monthTotal)}</strong></div>
-        <div className="stat"><span>Pago no mês (caixa)</span><strong>{brl(data.monthCashOut)}</strong></div>
+        {isAdmin && (
+          <div className="stat"><span>Pago no mês (caixa)</span><strong>{brl(data.monthCashOut)}</strong></div>
+        )}
         <div className="stat"><span>Total a pagar</span><strong>{brl(data.pendingTotal)}</strong></div>
       </div>
 

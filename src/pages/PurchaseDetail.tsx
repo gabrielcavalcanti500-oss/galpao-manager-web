@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { brl, dateTime, num, PAYMENT_METHODS } from '../lib/format'
+import { useAuth } from '../lib/auth'
 
 type Detail = {
   id: string
@@ -32,6 +33,7 @@ const methodLabel = (m: string) => PAYMENT_METHODS.find(([v]) => v === m)?.[1] ?
 export default function PurchaseDetail() {
   const { id } = useParams()
   const qc = useQueryClient()
+  const isAdmin = useAuth().company!.role !== 'operator'
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState('cash')
   const [msg, setMsg] = useState('')
@@ -210,7 +212,7 @@ export default function PurchaseDetail() {
       {msg && <p className="msg">{msg}</p>}
       <div className="row-between">
         <Link to="/compras" className="btn secondary">Voltar</Link>
-        {p.status === 'confirmed' && (
+        {p.status === 'confirmed' && isAdmin && (
           <button className="btn danger" disabled={cancel.isPending} onClick={askCancel}>
             Cancelar compra
           </button>

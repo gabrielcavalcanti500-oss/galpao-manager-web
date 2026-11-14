@@ -10,6 +10,7 @@ import Purchases from './pages/Purchases'
 import NewPurchase from './pages/NewPurchase'
 import PurchaseDetail from './pages/PurchaseDetail'
 import SupplierDetail from './pages/SupplierDetail'
+import Team from './pages/Team'
 
 export default function App() {
   const { session, company, loading } = useAuth()
@@ -21,6 +22,7 @@ export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
+        {company.role !== 'operator' && <Route path="equipe" element={<Team />} />}
         <Route index element={<Home />} />
         <Route path="compras" element={<Purchases />} />
         <Route path="compras/nova" element={<NewPurchase />} />
