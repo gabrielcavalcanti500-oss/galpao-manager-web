@@ -1,0 +1,23 @@
+import { NavLink, Outlet } from 'react-router-dom'
+import { useAuth } from '../lib/auth'
+
+export default function Layout() {
+  const { company, signOut } = useAuth()
+  return (
+    <>
+      <header className="topbar">
+        <strong>{company?.name}</strong>
+        <nav>
+          <NavLink to="/" end>Início</NavLink>
+          <NavLink to="/fornecedores">Fornecedores</NavLink>
+          <NavLink to="/materiais">Materiais</NavLink>
+          <NavLink to="/compras">Compras</NavLink>
+        </nav>
+        <button onClick={signOut}>Sair</button>
+      </header>
+      <main className="page">
+        <Outlet />
+      </main>
+    </>
+  )
+}
