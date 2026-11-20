@@ -51,6 +51,9 @@ export default function Home() {
       const receivedInSales = cashRows
         .filter((r) => r.category.startsWith('sale'))
         .reduce((s, r) => s + (r.direction === 'in' ? Number(r.amount) : -Number(r.amount)), 0)
+      const paidInExpenses = cashRows
+        .filter((r) => r.category.startsWith('expense'))
+        .reduce((s, r) => s + (r.direction === 'out' ? Number(r.amount) : -Number(r.amount)), 0)
 
       return {
         stock: (stock.data ?? []) as Stock[],
@@ -61,7 +64,7 @@ export default function Home() {
         toPay: sum(toPay.data, 'pending_amount'),
         toReceive: sum(toReceive.data, 'pending_amount'),
         paidInPurchases,
-        receivedInSales,
+        paidInExpenses, receivedInSales,
         recent: (recent.data ?? []) as unknown as Recent[],
       }
     },
@@ -80,9 +83,10 @@ export default function Home() {
           <>
             <div className="stat"><span>Pago em compras (mês)</span><strong>{brl(data.paidInPurchases)}</strong></div>
             <div className="stat"><span>Recebido em vendas (mês)</span><strong>{brl(data.receivedInSales)}</strong></div>
+            <div className="stat"><span>Gastos no mês</span><strong>{brl(data.paidInExpenses)}</strong></div>
             <div className="stat">
               <span>Saldo de caixa no mês</span>
-              <strong>{brl(data.receivedInSales - data.paidInPurchases)}</strong>
+              <strong>{brl(data.receivedInSales - data.paidInPurchases - data.paidInExpenses)}</strong>
             </div>
           </>
         )}
