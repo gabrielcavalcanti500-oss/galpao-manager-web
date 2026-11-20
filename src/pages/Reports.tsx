@@ -9,6 +9,8 @@ import {
 type Report = {
     purchases: { count: number; total: number; paid: number }
     sales: { count: number; total: number; received: number }
+    profit: { revenue_with_cost: number; cost: number; revenue_without_cost: number }
+    write_offs_cost: number
     expenses_total: number
     expenses_by_category: { name: string; total: number }[]
     cash: { received: number; paid_purchases: number; paid_expenses: number }
@@ -19,6 +21,8 @@ type Report = {
         bought_value: number
         sold_qty: number
         sold_value: number
+        sold_value_costed: number
+        sold_cost: number
         stock: number
     }[]
 }
@@ -77,6 +81,8 @@ export default function Reports() {
             `Pago em compras: ${brl(x.cash.paid_purchases)}`,
             `Gastos pagos: ${brl(x.cash.paid_expenses)}`,
             `Saldo de caixa: ${brl(saldo)}`,
+            `Lucro bruto estimado: ${brl(x.profit.revenue_with_cost - x.profit.cost)}`,
+            `Baixas de estoque (custo): ${brl(x.write_offs_cost)}`,
         ]
         if (x.materials.length > 0) {
             lines.push('', '*Materiais*')
@@ -105,6 +111,7 @@ export default function Reports() {
     }
 
     const saldo = r ? r.cash.received - r.cash.paid_purchases - r.cash.paid_expenses : 0
+    const profit = r ? r.profit.revenue_with_cost - r.profit.cost : 0
     const text = r ? buildText(r) : ''
 
     return (
@@ -133,6 +140,7 @@ export default function Reports() {
                         <div className="stat"><span>Vendas ({r.sales.count})</span><strong>{brl(r.sales.total)}</strong></div>
                         <div className="stat"><span>Gastos</span><strong>{brl(r.expenses_total)}</strong></div>
                         <div className="stat"><span>Saldo de caixa</span><strong>{brl(saldo)}</strong></div>
+                        <div className="stat"><span>Lucro bruto estimado</span><strong>{brl(profit)}</strong></div>
                     </div>
 
                     <div className="panel">
@@ -147,6 +155,27 @@ export default function Reports() {
                     </div>
 
                     <div className="panel">
+                        <div className="panel">
+                            <h3>Lucro bruto estimado</h3>
+                            <p>Vendas com custo conhecido: <strong>{brl(r.profit.revenue_with_cost)}</strong></p>
+                            <p>Custo desses materiais: <strong>{brl(r.profit.cost)}</strong></p>
+                            <p>
+                                Lucro bruto: <strong>{brl(profit)}</strong>
+                                {r.profit.revenue_with_cost > 0 &&
+                                    ` (margem de ${((profit / r.profit.revenue_with_cost) * 100).toFixed(1).replace('.', ',')}%)`}
+                            </p>
+                            <p>Baixas de estoque (perdas, uso próprio, ajustes): <strong>{brl(r.write_offs_cost)}</strong></p>
+                            {r.profit.revenue_without_cost > 0 && (
+                                <p className="msg">
+                                    {brl(r.profit.revenue_without_cost)} em vendas ficaram fora do cálculo porque o material
+                                    não tinha compra registrada.
+                                </p>
+                            )}
+                            <p style={{ fontSize: 13, color: '#666' }}>
+                                Custo = preço médio de compra do material até a data da venda. É uma estimativa,
+                                não substitui a contabilidade.
+                            </p>
+                        </div>
                         <h3>Por material</h3>
                         {r.materials.length === 0 ? <p>Sem movimento de materiais.</p> : (
                             <div className="table-wrap">
@@ -161,8 +190,12 @@ export default function Reports() {
                                             <tr key={m.name}>
                                                 <td>{m.name}</td>
                                                 <td>{qty(m.bought_qty)} {m.unit}<br /><small>{brl(m.bought_value)}</small></td>
-                                                <td>{qty(m.sold_qty)} {m.unit}<br /><small>{brl(m.sold_value)}</small></td>
-                                                <td>{qty(m.stock)} {m.unit}</td>
+                                                <td>
+                                                    {qty(m.sold_qty)} {m.unit}<br /><small>{brl(m.sold_value)}</small>
+                                                    {m.sold_value_costed > 0 && (
+                                                        <><br /><small>lucro {brl(m.sold_value_costed - m.sold_cost)}</small></>
+                                                    )}
+                                                </td>                                                <td>{qty(m.stock)} {m.unit}</td>
                                             </tr>
                                         ))}
                                     </tbody>

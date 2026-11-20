@@ -16,6 +16,7 @@ export default function Layout() {
           <NavLink to="/materiais">Materiais</NavLink>
           {company?.role !== 'operator' && <NavLink to="/gastos">Gastos</NavLink>}
           {company?.role !== 'operator' && <NavLink to="/relatorios">Relatórios</NavLink>}
+          {company?.role !== 'operator' && <NavLink to="/retiradas">Retiradas</NavLink>}
           {company?.role !== 'operator' && <NavLink to="/equipe">Equipe</NavLink>}
         </nav>
         <button onClick={signOut}>Sair</button>
