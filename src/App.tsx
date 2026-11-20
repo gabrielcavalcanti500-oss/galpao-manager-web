@@ -16,6 +16,7 @@ import Customers from './pages/Customers'
 import Materials from './pages/Materials'
 import Team from './pages/Team'
 import Expenses from './pages/Expenses'
+import Reports from './pages/Reports'
 
 export default function App() {
   const { session, company, loading } = useAuth()
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="materiais" element={<Materials />} />
         {company.role !== 'operator' && <Route path="equipe" element={<Team />} />}
         {company.role !== 'operator' && <Route path="gastos" element={<Expenses />} />}
+        {company.role !== 'operator' && <Route path="relatorios" element={<Reports />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
