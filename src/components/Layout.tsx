@@ -9,10 +9,12 @@ export default function Layout() {
         <strong>{company?.name}</strong>
         <nav>
           <NavLink to="/" end>Início</NavLink>
+          <NavLink to="/compras">Compras</NavLink>
+          <NavLink to="/vendas">Vendas</NavLink>
           <NavLink to="/fornecedores">Fornecedores</NavLink>
+          <NavLink to="/clientes">Clientes</NavLink>
           <NavLink to="/materiais">Materiais</NavLink>
           {company?.role !== 'operator' && <NavLink to="/equipe">Equipe</NavLink>}
-          <NavLink to="/compras">Compras</NavLink>
         </nav>
         <button onClick={signOut}>Sair</button>
       </header>
