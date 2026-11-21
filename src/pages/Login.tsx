@@ -30,6 +30,7 @@ export default function Login() {
 
   return (
     <form className="card" onSubmit={submit}>
+      <div className="brand"><span className="logo">G</span><strong>Galpão Manager</strong></div>
       <h2>{mode === 'login' ? 'Entrar' : 'Criar conta'}</h2>
       {mode === 'signup' && (
         <input placeholder="Seu nome" value={name}

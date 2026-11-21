@@ -18,6 +18,7 @@ import Team from './pages/Team'
 import Expenses from './pages/Expenses'
 import Reports from './pages/Reports'
 import Withdrawals from './pages/Withdrawals'
+import More from './pages/More'
 
 export default function App() {
   const { session, company, loading } = useAuth()
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="fornecedores" element={<Suppliers />} />
         <Route path="fornecedores/:id" element={<SupplierDetail />} />
         <Route path="clientes" element={<Customers />} />
+        <Route path="mais" element={<More />} />
         <Route path="materiais" element={<Materials />} />
         {company.role !== 'operator' && <Route path="equipe" element={<Team />} />}
         {company.role !== 'operator' && <Route path="gastos" element={<Expenses />} />}

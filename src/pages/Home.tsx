@@ -74,6 +74,10 @@ export default function Home() {
 
   return (
     <>
+      <div className="quick">
+        <Link to="/compras/nova" className="btn">📥 Nova compra</Link>
+        <Link to="/vendas/nova" className="btn">📤 Nova venda</Link>
+      </div>
       <div className="stats">
         <div className="stat"><span>Compras no mês ({data.purchasesCount})</span><strong>{brl(data.purchasesTotal)}</strong></div>
         <div className="stat"><span>Vendas no mês ({data.salesCount})</span><strong>{brl(data.salesTotal)}</strong></div>
