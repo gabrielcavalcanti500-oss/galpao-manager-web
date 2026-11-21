@@ -1,11 +1,14 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { NAV, TABS, visibleNav } from '../lib/nav'
+import { NAV, ROLE_LABEL, TABS, visibleNav } from '../lib/nav'
+import { displayName, useMyProfile } from '../lib/profile'
 
 export default function Layout() {
   const { company, session, signOut } = useAuth()
+  const { data: profile } = useMyProfile()
   const { pathname } = useLocation()
 
+  const name = displayName(profile?.full_name, session?.user.email)
   const items = visibleNav(company!.role)
   const groups = [...new Set(items.map((i) => i.group))]
   const tabs = TABS.map((t) => NAV.find((i) => i.to === t)!)
@@ -19,8 +22,8 @@ export default function Layout() {
     <div className="app">
       <aside className="sidebar">
         <div className="brand-row">
-          <span className="logo">G</span>
-          <span className="company">{company!.name}</span>
+          <img className="logo" src="/icons/icon-192.png" alt="" />
+          <span className="product">Galpão<br />Manager</span>
         </div>
         {groups.map((g) => (
           <div key={g}>
@@ -34,15 +37,32 @@ export default function Layout() {
           </div>
         ))}
         <div className="spacer" />
-        <div className="user">{session?.user.email}</div>
+        <div className="company-box">
+          <small>Minha empresa</small>
+          {company!.name}
+        </div>
         <button className="logout" onClick={logout}>Sair</button>
       </aside>
 
       <div className="main">
         <header className="mobile-top">
-          <span className="logo">G</span>
-          <strong>{company!.name}</strong>
+          <img className="logo" src="/icons/icon-192.png" alt="" />
+          <div>
+            <strong>Galpão Manager</strong>
+            <small>{company!.name}</small>
+          </div>
         </header>
+
+        <div className="desk-top">
+          <div className="user-chip">
+            <span className="avatar">{name.charAt(0).toUpperCase()}</span>
+            <div>
+              <strong>{name}</strong>
+              <small>{ROLE_LABEL[company!.role]}</small>
+            </div>
+          </div>
+        </div>
+
         <main className="page">
           <Outlet />
         </main>

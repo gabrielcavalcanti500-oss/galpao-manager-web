@@ -26,3 +26,8 @@ export const TABS = ['/', '/compras', '/vendas', '/materiais']
 
 export const visibleNav = (role: string) =>
     NAV.filter((i) => !i.adminOnly || role !== 'operator')
+export const ROLE_LABEL: Record<string, string> = {
+    owner: 'Dono',
+    admin: 'Administrador',
+    operator: 'Operador',
+}
