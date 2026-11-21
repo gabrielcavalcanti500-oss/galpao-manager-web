@@ -1,3 +1,4 @@
+import { Menu, LogOut } from 'lucide-react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { NAV, ROLE_LABEL, TABS, visibleNav } from '../lib/nav'
@@ -28,12 +29,16 @@ export default function Layout() {
         {groups.map((g) => (
           <div key={g}>
             <div className="group">{g}</div>
-            {items.filter((i) => i.group === g).map((i) => (
-              <NavLink key={i.to} to={i.to} end={i.to === '/'}
-                className={({ isActive }) => (isActive ? 'active' : '')}>
-                <span>{i.icon}</span>{i.label}
-              </NavLink>
-            ))}
+            {items.filter((i) => i.group === g).map((i) => {
+              const Icon = i.icon
+              return (
+                <NavLink key={i.to} to={i.to} end={i.to === '/'}
+                  className={({ isActive }) => (isActive ? 'active' : '')}>
+                  <Icon size={20} />
+                  {i.label}
+                </NavLink>
+              )
+            })}
           </div>
         ))}
         <div className="spacer" />
@@ -41,7 +46,9 @@ export default function Layout() {
           <small>Minha empresa</small>
           {company!.name}
         </div>
-        <button className="logout" onClick={logout}>Sair</button>
+        <button className="logout" onClick={logout}>
+          <LogOut size={18} /> Sair
+        </button>
       </aside>
 
       <div className="main">
@@ -69,15 +76,18 @@ export default function Layout() {
       </div>
 
       <nav className="tabbar">
-        {tabs.map((t) => (
-          <NavLink key={t.to} to={t.to} end={t.to === '/'}
-            className={({ isActive }) => (isActive ? 'active' : '')}>
-            <span className="ico">{t.icon}</span>
-            {t.shortLabel ?? t.label}
-          </NavLink>
-        ))}
+        {tabs.map((t) => {
+          const Icon = t.icon
+          return (
+            <NavLink key={t.to} to={t.to} end={t.to === '/'}
+              className={({ isActive }) => (isActive ? 'active' : '')}>
+              <Icon size={22} />
+              {t.shortLabel ?? t.label}
+            </NavLink>
+          )
+        })}
         <NavLink to="/mais" className={inTabs ? '' : 'active'}>
-          <span className="ico">☰</span>
+          <Menu size={22} />
           Mais
         </NavLink>
       </nav>

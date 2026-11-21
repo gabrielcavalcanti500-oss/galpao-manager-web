@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import {
+  ArrowDown, ArrowRight, ArrowUp, ChartColumn, Landmark, Package,
+  ShoppingCart, Tag, TrendingUp, Truck, Wallet,
+  type LucideIcon,
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { displayName, firstName, useMyProfile } from '../lib/profile'
@@ -59,11 +64,11 @@ function rangeBounds(r: Range) {
   return { from: dayStartISO(fromStr), to: nextDayStartISO(todayInput()) }
 }
 
-const MOVE = {
-  purchase: { icon: '🛒', tone: 'green', title: 'Compra registrada' },
-  sale: { icon: '🏷️', tone: 'blue', title: 'Venda realizada' },
-  expense: { icon: '💸', tone: 'orange', title: 'Gasto registrado' },
-} as const
+const MOVE: Record<Recent['kind'], { icon: LucideIcon; tone: string; title: string }> = {
+  purchase: { icon: ShoppingCart, tone: 'green', title: 'Compra registrada' },
+  sale: { icon: Tag, tone: 'blue', title: 'Venda realizada' },
+  expense: { icon: Wallet, tone: 'orange', title: 'Gasto registrado' },
+}
 
 const moveLink = (m: Recent) =>
   m.kind === 'purchase' ? `/compras/${m.id}` : m.kind === 'sale' ? `/vendas/${m.id}` : '/gastos'
@@ -91,14 +96,14 @@ function Delta({ value, goodWhenUp }: { value: number | null; goodWhenUp: boolea
   if (value == null) return <div className="delta">sem base de comparação</div>
   const up = value > 0.5
   const down = value < -0.5
-  const arrow = up ? '↑' : down ? '↓' : '→'
+  const Arrow = up ? ArrowUp : down ? ArrowDown : ArrowRight
   const good = up ? goodWhenUp : down ? goodWhenUp === false : null
   const cls = goodWhenUp === null || (!up && !down) ? '' : good ? 'up' : 'down'
   const shown = Math.min(Math.abs(value), 999).toFixed(0)
   const sign = up ? '+' : down ? '−' : ''
   return (
     <div className="delta">
-      <b className={cls}>{arrow} {sign}{shown}%</b> vs. período anterior
+      <b className={cls}><Arrow size={13} strokeWidth={2.5} />{sign}{shown}%</b> vs. período anterior
     </div>
   )
 }
@@ -161,6 +166,7 @@ function FlowChart({ days, a, b }: { days: Day[]; a: Series; b: Series }) {
     ? days.map((_, i) => i)
     : [...new Set([0, 1, 2, 3, 4].map((k) => Math.round((k * (n - 1)) / 4)))]
   const fmtDay = (s: string) => `${s.slice(8, 10)}/${s.slice(5, 7)}`
+  const pairs: [number[], Series][] = [[av, a], [bv, b]]
 
   return (
     <div className="chart">
@@ -193,19 +199,17 @@ function FlowChart({ days, a, b }: { days: Day[]; a: Series; b: Series }) {
             {fmtDay(days[i].day)}
           </text>
         ))}
-        {n > 1 && [[av, a], [bv, b]].map(([vals, s]) => (
-          <path key={(s as Series).key} d={area(vals as number[])}
-            fill={`url(#fc-${(s as Series).key})`} />
+        {n > 1 && pairs.map(([vals, s]) => (
+          <path key={`a-${s.key}`} d={area(vals)} fill={`url(#fc-${s.key})`} />
         ))}
-        {n > 1 && [[av, a], [bv, b]].map(([vals, s]) => (
-          <path key={`l-${(s as Series).key}`} d={line(vals as number[])} fill="none"
-            stroke={(s as Series).color} strokeWidth="2.5"
-            strokeLinejoin="round" strokeLinecap="round" />
+        {n > 1 && pairs.map(([vals, s]) => (
+          <path key={`l-${s.key}`} d={line(vals)} fill="none" stroke={s.color}
+            strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
         ))}
-        {(n <= 14) && [[av, a], [bv, b]].map(([vals, s]) =>
-          (vals as number[]).map((v, i) => (
-            <circle key={`${(s as Series).key}-${i}`} cx={x(i)} cy={y(v)} r="3.5"
-              fill={(s as Series).color} stroke="#fff" strokeWidth="1.5" />
+        {n <= 14 && pairs.map(([vals, s]) =>
+          vals.map((v, i) => (
+            <circle key={`${s.key}-${i}`} cx={x(i)} cy={y(v)} r="3.5"
+              fill={s.color} stroke="#fff" strokeWidth="1.5" />
           )),
         )}
       </svg>
@@ -215,9 +219,19 @@ function FlowChart({ days, a, b }: { days: Day[]; a: Series; b: Series }) {
 
 const TILE_COLORS = ['#0e9f6e', '#3b82f6', '#f97316', '#8b5cf6']
 
+type Action = {
+  to: string
+  label: string
+  hint: string
+  icon: LucideIcon
+  fill: string
+  tone: string
+}
+
 export default function Home() {
   const { company, session } = useAuth()
   const companyId = company!.id
+  const isAdmin = company!.role !== 'operator'
   const { data: profile } = useMyProfile()
   const [range, setRange] = useState<Range>('30')
 
@@ -241,10 +255,24 @@ export default function Home() {
 
   const balance = (t: Totals) => (t.received ?? 0) - (t.paid ?? 0)
 
+  const actions: Action[] = [
+    { to: '/compras/nova', label: 'Nova compra', hint: 'Registrar entrada de material', icon: ShoppingCart, fill: 'fill-green', tone: '' },
+    { to: '/vendas/nova', label: 'Nova venda', hint: 'Registrar saída de material', icon: Tag, fill: 'fill-blue', tone: '' },
+    ...(isAdmin
+      ? [
+        { to: '/gastos', label: 'Registrar gasto', hint: 'Luz, frete, salários...', icon: Wallet, fill: '', tone: 'tone-orange' },
+        { to: '/relatorios', label: 'Ver relatórios', hint: 'Resumo para o WhatsApp', icon: ChartColumn, fill: '', tone: 'tone-purple' },
+      ]
+      : [
+        { to: '/materiais', label: 'Ver estoque', hint: 'Saldo de cada material', icon: Package, fill: '', tone: 'tone-orange' },
+        { to: '/fornecedores', label: 'Fornecedores', hint: 'Quem vende para você', icon: Truck, fill: '', tone: 'tone-purple' },
+      ]),
+  ]
+
   return (
     <>
       <div className="hello">
-        <div className="hello-ico">📈</div>
+        <div className="hello-ico"><TrendingUp size={28} /></div>
         <div>
           <h1>Olá, {greeting}! 👋</h1>
           <p>Aqui está um resumo do seu negócio.</p>
@@ -258,6 +286,24 @@ export default function Home() {
         </div>
       </div>
 
+      <div className="actions-strip">
+        {actions.map((a) => {
+          const Icon = a.icon
+          return (
+            <Link key={a.to} to={a.to} className={`action ${a.fill}`}>
+              <span className={`aico ${a.tone ? a.tone : ''}`.trim()}
+                style={a.tone ? { background: 'var(--bg)' } : undefined}>
+                <Icon size={22} />
+              </span>
+              <span>
+                <strong>{a.label}</strong>
+                <small>{a.hint}</small>
+              </span>
+            </Link>
+          )
+        })}
+      </div>
+
       {isLoading && !ov && <p>Carregando...</p>}
       {error && <p className="msg">{(error as { message?: string }).message ?? 'Erro ao carregar o painel'}</p>}
 
@@ -265,31 +311,34 @@ export default function Home() {
         const cur = ov.current
         const prev = ov.previous
         const s = ov.series
-        const kpis = [
-          {
-            label: 'Compras', icon: '🛒', tone: 'green', color: '#0e9f6e',
-            value: cur.purchases, delta: pct(cur.purchases, prev.purchases),
-            goodWhenUp: null as boolean | null, spark: s.map((d) => Number(d.purchases)),
-          },
-          {
-            label: 'Vendas', icon: '🏷️', tone: 'blue', color: '#3b82f6',
-            value: cur.sales, delta: pct(cur.sales, prev.sales),
-            goodWhenUp: true as boolean | null, spark: s.map((d) => Number(d.sales)),
-          },
-          ...(ov.admin ? [
+        const kpis: {
+          label: string; icon: LucideIcon; tone: string; color: string
+          value: number; delta: number | null; goodWhenUp: boolean | null; spark: number[]
+        }[] = [
             {
-              label: 'Gastos', icon: '💸', tone: 'orange', color: '#f97316',
-              value: cur.expenses ?? 0, delta: pct(cur.expenses, prev.expenses),
-              goodWhenUp: false as boolean | null, spark: s.map((d) => Number(d.expenses)),
+              label: 'Compras', icon: ShoppingCart, tone: 'green', color: '#0e9f6e',
+              value: cur.purchases, delta: pct(cur.purchases, prev.purchases),
+              goodWhenUp: null, spark: s.map((d) => Number(d.purchases)),
             },
             {
-              label: 'Saldo do caixa', icon: '🏦', tone: 'purple', color: '#8b5cf6',
-              value: balance(cur), delta: pct(balance(cur), balance(prev)),
-              goodWhenUp: true as boolean | null,
-              spark: s.map((d) => Number(d.cash_in) - Number(d.cash_out)),
+              label: 'Vendas', icon: Tag, tone: 'blue', color: '#3b82f6',
+              value: cur.sales, delta: pct(cur.sales, prev.sales),
+              goodWhenUp: true, spark: s.map((d) => Number(d.sales)),
             },
-          ] : []),
-        ]
+            ...(ov.admin ? [
+              {
+                label: 'Gastos', icon: Wallet, tone: 'orange', color: '#f97316',
+                value: cur.expenses ?? 0, delta: pct(cur.expenses, prev.expenses),
+                goodWhenUp: false, spark: s.map((d) => Number(d.expenses)),
+              },
+              {
+                label: 'Saldo do caixa', icon: Landmark, tone: 'purple', color: '#8b5cf6',
+                value: balance(cur), delta: pct(balance(cur), balance(prev)),
+                goodWhenUp: true,
+                spark: s.map((d) => Number(d.cash_in) - Number(d.cash_out)),
+              },
+            ] : []),
+          ]
 
         const a: Series = ov.admin
           ? { key: 'cash_in', label: 'Entradas', color: '#0e9f6e' }
@@ -301,19 +350,22 @@ export default function Home() {
         return (
           <>
             <div className="kpis">
-              {kpis.map((k) => (
-                <div className="kpi" key={k.label}>
-                  <div className="kpi-row">
-                    <div className={`kpi-ico tone-${k.tone}`}>{k.icon}</div>
-                    <div>
-                      <div className="label">{k.label}</div>
-                      <div className="value">{brl(k.value)}</div>
+              {kpis.map((k) => {
+                const Icon = k.icon
+                return (
+                  <div className="kpi" key={k.label}>
+                    <div className="kpi-row">
+                      <div className={`kpi-ico tone-${k.tone}`}><Icon size={22} /></div>
+                      <div>
+                        <div className="label">{k.label}</div>
+                        <div className="value">{brl(k.value)}</div>
+                      </div>
+                      <Sparkline values={k.spark} color={k.color} />
                     </div>
-                    <Sparkline values={k.spark} color={k.color} />
+                    <Delta value={k.delta} goodWhenUp={k.goodWhenUp} />
                   </div>
-                  <Delta value={k.delta} goodWhenUp={k.goodWhenUp} />
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="grid-2">
@@ -329,25 +381,28 @@ export default function Home() {
                   <h3>Últimas movimentações</h3>
                 </div>
                 {ov.recent.length === 0 ? <p>Nenhuma movimentação ainda.</p> : (
-                  ov.recent.map((m) => (
-                    <Link key={`${m.kind}-${m.id}`} to={moveLink(m)}
-                      className={`move ${m.status === 'cancelled' ? 'cancelled' : ''}`}>
-                      <div className={`ico tone-${MOVE[m.kind].tone}`}>{MOVE[m.kind].icon}</div>
-                      <div className="txt">
-                        <strong>{MOVE[m.kind].title}</strong>
-                        <small>{m.title}</small>
-                      </div>
-                      <div className="amt">
-                        <strong>{brl(m.amount)}</strong>
-                        <small>{m.status === 'cancelled' ? 'Cancelada' : when(m.at)}</small>
-                      </div>
-                    </Link>
-                  ))
+                  ov.recent.map((m) => {
+                    const Icon = MOVE[m.kind].icon
+                    return (
+                      <Link key={`${m.kind}-${m.id}`} to={moveLink(m)}
+                        className={`move ${m.status === 'cancelled' ? 'cancelled' : ''}`}>
+                        <div className={`ico tone-${MOVE[m.kind].tone}`}><Icon size={20} /></div>
+                        <div className="txt">
+                          <strong>{MOVE[m.kind].title}</strong>
+                          <small>{m.title}</small>
+                        </div>
+                        <div className="amt">
+                          <strong>{brl(m.amount)}</strong>
+                          <small>{m.status === 'cancelled' ? 'Cancelada' : when(m.at)}</small>
+                        </div>
+                      </Link>
+                    )
+                  })
                 )}
               </div>
             </div>
 
-            <div className="grid-3">
+            <div className="grid-2 even">
               <div className="panel">
                 <div className="panel-head">
                   <h3>Estoque</h3>
@@ -404,27 +459,6 @@ export default function Home() {
                     <p><small>Estimativa pelo custo médio de compra do material.</small></p>
                   </>
                 )}
-              </div>
-
-              <div className="panel">
-                <div className="panel-head">
-                  <h3>Ações rápidas</h3>
-                </div>
-                <div className="qa-grid">
-                  <Link className="qa" to="/compras/nova"><span className="ico">🛒</span>Nova compra</Link>
-                  <Link className="qa" to="/vendas/nova"><span className="ico">🏷️</span>Nova venda</Link>
-                  {ov.admin ? (
-                    <>
-                      <Link className="qa" to="/gastos"><span className="ico">💸</span>Registrar gasto</Link>
-                      <Link className="qa" to="/relatorios"><span className="ico">📊</span>Ver relatórios</Link>
-                    </>
-                  ) : (
-                    <>
-                      <Link className="qa" to="/materiais"><span className="ico">📦</span>Ver estoque</Link>
-                      <Link className="qa" to="/fornecedores"><span className="ico">🚚</span>Fornecedores</Link>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
           </>
